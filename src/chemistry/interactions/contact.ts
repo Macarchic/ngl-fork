@@ -263,23 +263,24 @@ function contactColor (type: ContactType, overrides?: ContactColorOverrides) {
   // 2) дефолтні кольори як було
   switch (type) {
     case ContactType.HydrogenBond:
-    case ContactType.WaterHydrogenBond:
     case ContactType.BackboneHydrogenBond:
       return tmpColor.setHex(0x1cda1c).toArray()
+    case ContactType.WaterHydrogenBond:
+      return tmpColor.setHex(0x002fff).toArray()
     case ContactType.Hydrophobic:
       return tmpColor.setHex(0xbb4ae2).toArray()
     case ContactType.HalogenBond:
-      return tmpColor.setHex(0x00a8a8).toArray()
+      return tmpColor.setHex(0x26dbff).toArray()
     case ContactType.IonicInteraction:
-      return tmpColor.setHex(0xff8618).toArray()
+      return tmpColor.setHex(0xffbe00).toArray()
     case ContactType.MetalCoordination:
-      return tmpColor.setHex(0x8C4099).toArray()
+      return tmpColor.setHex(0xe7e7e7).toArray()
     case ContactType.CationPi:
-      return tmpColor.setHex(0x986998).toArray()
+      return tmpColor.setHex(0xffff00).toArray()
     case ContactType.PiStacking:
       return tmpColor.setHex(0xe792dd).toArray()
     case ContactType.WeakHydrogenBond:
-      return tmpColor.setHex(0x98ddf1).toArray()
+      return tmpColor.setHex(0xbbd7cd).toArray()
     default:
       return tmpColor.setHex(0xCCCCCC).toArray()
   }
