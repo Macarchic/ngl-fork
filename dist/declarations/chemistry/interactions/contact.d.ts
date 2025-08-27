@@ -94,15 +94,43 @@ export declare const ContactDataDefaultParams: {
     backboneHydrogenBond: boolean;
     radius: number;
     filterSele: string;
+    colors: Partial<{
+        hydrogenBond: string;
+        weakHydrogenBond: string;
+        waterHydrogenBond: string;
+        backboneHydrogenBond: string;
+        hydrophobic: string;
+        halogenBond: string;
+        ionicInteraction: string;
+        metalCoordination: string;
+        cationPi: string;
+        piStacking: string;
+        default: string;
+    }>;
 };
-export declare type ContactDataParams = typeof ContactDataDefaultParams | {
+export declare type ContactDataParams = typeof ContactDataDefaultParams | ({
     filterSele: string | [string, string];
-};
+} & {
+    colors?: ContactColorOverrides;
+});
 export declare const ContactLabelDefaultParams: {
     unit: string;
     size: number;
 };
 export declare type ContactLabelParams = typeof ContactLabelDefaultParams;
+export declare type ContactColorOverrides = Partial<{
+    hydrogenBond: string;
+    weakHydrogenBond: string;
+    waterHydrogenBond: string;
+    backboneHydrogenBond: string;
+    hydrophobic: string;
+    halogenBond: string;
+    ionicInteraction: string;
+    metalCoordination: string;
+    cationPi: string;
+    piStacking: string;
+    default: string;
+}>;
 export interface ContactData {
     position1: Float32Array;
     position2: Float32Array;

@@ -215,6 +215,21 @@ export { StructureComponentDefaultParameters } from './component/structure-compo
 
 //
 
+export {
+  calculateContacts,
+  getContactData,
+  contactTypeName,
+  ContactType,
+  ContactDataDefaultParams
+} from './chemistry/interactions/contact'
+
+export type {
+  ContactColorOverrides,
+  ContactDataParams
+} from './chemistry/interactions/contact'
+
+//
+
 import Version from './version'
 
 export {

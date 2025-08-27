@@ -4,6 +4,7 @@
  * @private
  */
 import StructureRepresentation, { StructureRepresentationParameters } from './structure-representation';
+import { ContactColorOverrides } from '../chemistry/interactions/contact';
 import TextBuffer from '../buffer/text-buffer';
 import Viewer from '../viewer/viewer';
 import { Structure } from '../ngl';
@@ -41,6 +42,7 @@ export interface ContactRepresentationParameters extends StructureRepresentation
     refineSaltBridges: boolean;
     masterModelIndex: number;
     lineOfSightDistFactor: number;
+    colors?: ContactColorOverrides;
 }
 /**
  * Contact representation.
@@ -76,6 +78,7 @@ declare class ContactRepresentation extends StructureRepresentation {
     protected refineSaltBridges: boolean;
     protected masterModelIndex: number;
     protected lineOfSightDistFactor: number;
+    protected colors?: ContactColorOverrides;
     constructor(structure: Structure, viewer: Viewer, params: Partial<ContactRepresentationParameters>);
     init(params: Partial<ContactRepresentationParameters>): void;
     getAtomRadius(): number;
