@@ -203,10 +203,13 @@ export const ContactDataDefaultParams = {
   waterHydrogenBond: true,
   backboneHydrogenBond: true,
   radius: 1,
-  filterSele: ''
+  filterSele: '',
+  colors: {} as ContactColorOverrides 
 }
-export type ContactDataParams = typeof ContactDataDefaultParams
-  | { filterSele: string|[string, string] }
+export type ContactDataParams =
+  | typeof ContactDataDefaultParams
+  | ({ filterSele: string|[string, string] } & { colors?: ContactColorOverrides })
+
 
 export const ContactLabelDefaultParams = {
   unit: '',
@@ -215,27 +218,68 @@ export const ContactLabelDefaultParams = {
 
 export type ContactLabelParams = typeof ContactLabelDefaultParams
 
+
+export type ContactColorOverrides = Partial<{
+  hydrogenBond: string
+  weakHydrogenBond: string
+  waterHydrogenBond: string
+  backboneHydrogenBond: string
+  hydrophobic: string
+  halogenBond: string
+  ionicInteraction: string
+  metalCoordination: string
+  cationPi: string
+  piStacking: string
+  default: string
+}>
+
+
+const ContactTypeKey: Record<ContactType, keyof NonNullable<ContactColorOverrides> | 'default'> = {
+  [ContactType.Unknown]: 'default',
+  [ContactType.IonicInteraction]: 'ionicInteraction',
+  [ContactType.CationPi]: 'cationPi',
+  [ContactType.PiStacking]: 'piStacking',
+  [ContactType.HydrogenBond]: 'hydrogenBond',
+  [ContactType.HalogenBond]: 'halogenBond',
+  [ContactType.Hydrophobic]: 'hydrophobic',
+  [ContactType.MetalCoordination]: 'metalCoordination',
+  [ContactType.WeakHydrogenBond]: 'weakHydrogenBond',
+  [ContactType.WaterHydrogenBond]: 'waterHydrogenBond',
+  [ContactType.BackboneHydrogenBond]: 'backboneHydrogenBond'
+}
+
+
 const tmpColor = new Color()
-function contactColor (type: ContactType) {
+function contactColor (type: ContactType, overrides?: ContactColorOverrides) {
+  // 1) якщо передали кастомний колір – використовуємо його
+  const key = ContactTypeKey[type]
+  const hexOrCss = overrides?.[key] ?? (key !== 'default' ? undefined : overrides?.default)
+  if (hexOrCss) {
+    // приймає "#rrggbb", "rrggbb", "rgb(...)" тощо
+    tmpColor.set(hexOrCss as any)
+    return tmpColor.toArray()
+  }
+
+  // 2) дефолтні кольори як було
   switch (type) {
     case ContactType.HydrogenBond:
     case ContactType.WaterHydrogenBond:
     case ContactType.BackboneHydrogenBond:
-      return tmpColor.setHex(0x2B83BA).toArray()
+      return tmpColor.setHex(0x1cda1c).toArray()
     case ContactType.Hydrophobic:
-      return tmpColor.setHex(0x808080).toArray()
+      return tmpColor.setHex(0xbb4ae2).toArray()
     case ContactType.HalogenBond:
-      return tmpColor.setHex(0x40FFBF).toArray()
+      return tmpColor.setHex(0x00a8a8).toArray()
     case ContactType.IonicInteraction:
-      return tmpColor.setHex(0xF0C814).toArray()
+      return tmpColor.setHex(0xff8618).toArray()
     case ContactType.MetalCoordination:
       return tmpColor.setHex(0x8C4099).toArray()
     case ContactType.CationPi:
-      return tmpColor.setHex(0xFF8000).toArray()
+      return tmpColor.setHex(0x986998).toArray()
     case ContactType.PiStacking:
-      return tmpColor.setHex(0x8CB366).toArray()
+      return tmpColor.setHex(0xe792dd).toArray()
     case ContactType.WeakHydrogenBond:
-      return tmpColor.setHex(0xC5DDEC).toArray()
+      return tmpColor.setHex(0x98ddf1).toArray()
     default:
       return tmpColor.setHex(0xCCCCCC).toArray()
   }
@@ -305,7 +349,7 @@ export function getContactData (contacts: FrozenContacts, structure: Structure, 
     const l = index2[i]
     position1.push(x[k], y[k], z[k])
     position2.push(x[l], y[l], z[l])
-    color.push(...contactColor(ti))
+    color.push(...contactColor(ti, p.colors))
     radius.push(p.radius)
     picking.push(i)
   })

@@ -7,7 +7,7 @@
 import { defaults } from '../utils'
 import { RepresentationRegistry } from '../globals'
 import StructureRepresentation, { StructureRepresentationParameters } from './structure-representation'
-import { calculateContacts, getContactData, getLabelData } from '../chemistry/interactions/contact'
+import { calculateContacts, ContactColorOverrides, getContactData, getLabelData } from '../chemistry/interactions/contact'
 import CylinderBuffer from '../buffer/cylinder-buffer'
 import TextBuffer from '../buffer/text-buffer'
 import { getFixedCountDashData } from '../geometry/dash'
@@ -49,7 +49,8 @@ export interface ContactRepresentationParameters extends StructureRepresentation
   maxMetalDist: number
   refineSaltBridges: boolean
   masterModelIndex: number
-  lineOfSightDistFactor: number
+  lineOfSightDistFactor: number,
+  colors?: ContactColorOverrides
 }
 
 /**
@@ -86,6 +87,7 @@ class ContactRepresentation extends StructureRepresentation {
   protected refineSaltBridges: boolean
   protected masterModelIndex: number
   protected lineOfSightDistFactor: number
+  protected colors?: ContactColorOverrides
 
   constructor (structure: Structure, viewer: Viewer, params: Partial<ContactRepresentationParameters>) {
     super(structure, viewer, params)
@@ -203,6 +205,9 @@ class ContactRepresentation extends StructureRepresentation {
       lineOfSightDistFactor: {
         type: 'number', precision: 1, max: 10, min: 0.0, rebuild: true
       },
+      colors: {
+        type: 'hidden', rebuild: true
+      },
 
       radialSegments: true,
       disableImpostor: true
@@ -252,6 +257,7 @@ class ContactRepresentation extends StructureRepresentation {
     this.refineSaltBridges = defaults(p.refineSaltBridges, true)
     this.masterModelIndex = defaults(p.masterModelIndex, -1)
     this.lineOfSightDistFactor = defaults(p.lineOfSightDistFactor, 1.0)
+    this.colors = p.colors
 
     super.init(p)
   }
@@ -295,7 +301,8 @@ class ContactRepresentation extends StructureRepresentation {
       cationPi: this.cationPi,
       piStacking: this.piStacking,
       radius: this.radiusSize * this.radiusScale,
-      filterSele: this.filterSele
+      filterSele: this.filterSele,
+      colors: this.colors
     }
 
     const contacts = calculateContacts(sview, params)
