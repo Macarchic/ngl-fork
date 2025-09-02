@@ -4,7 +4,7 @@
  * @private
  */
 import StructureRepresentation, { StructureRepresentationParameters } from './structure-representation';
-import { ContactColorOverrides } from '../chemistry/interactions/contact';
+import { ContactColorOverrides, FrozenContacts, ContactData } from '../chemistry/interactions/contact';
 import TextBuffer from '../buffer/text-buffer';
 import Viewer from '../viewer/viewer';
 import { Structure } from '../ngl';
@@ -82,7 +82,10 @@ declare class ContactRepresentation extends StructureRepresentation {
     constructor(structure: Structure, viewer: Viewer, params: Partial<ContactRepresentationParameters>);
     init(params: Partial<ContactRepresentationParameters>): void;
     getAtomRadius(): number;
-    getContactData(sview: StructureView): import("../chemistry/interactions/contact").ContactData;
+    getContactData(sview: StructureView): {
+        data: ContactData;
+        contacts: FrozenContacts;
+    };
     createData(sview: StructureView): {
         bufferList: (TextBuffer | CylinderGeometryBuffer | CylinderImpostorBuffer)[];
     };

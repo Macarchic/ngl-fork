@@ -7,7 +7,7 @@
 import { defaults } from '../utils'
 import { RepresentationRegistry } from '../globals'
 import StructureRepresentation, { StructureRepresentationParameters } from './structure-representation'
-import { calculateContacts, ContactColorOverrides, getContactData, getLabelData } from '../chemistry/interactions/contact'
+import { calculateContacts, ContactColorOverrides, getContactData, getLabelData, FrozenContacts, ContactData} from '../chemistry/interactions/contact'
 import CylinderBuffer from '../buffer/cylinder-buffer'
 import TextBuffer from '../buffer/text-buffer'
 import { getFixedCountDashData } from '../geometry/dash'
@@ -265,7 +265,9 @@ class ContactRepresentation extends StructureRepresentation {
   getAtomRadius () {
     return 0
   }
-
+  
+  getContactData(sview: StructureView): { data: ContactData; contacts: FrozenContacts }
+  
   getContactData (sview: StructureView) {
     const params = {
       maxHydrophobicDist: this.maxHydrophobicDist,
@@ -306,11 +308,17 @@ class ContactRepresentation extends StructureRepresentation {
     }
 
     const contacts = calculateContacts(sview, params)
-    return getContactData(contacts, sview, dataParams)
+    console.log("always")
+    // if (raw) {
+      // console.log("raw data returned")
+    // return contacts
+    // }
+    const data = getContactData(contacts, sview, dataParams)
+    return {data, contacts}
   }
 
   createData (sview: StructureView) {
-    const contactData = this.getContactData(sview)
+    const { data: contactData /*, contacts*/ } = this.getContactData(sview)
 
     const bufferList = [
       new CylinderBuffer(

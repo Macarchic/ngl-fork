@@ -131,6 +131,9 @@ export declare type ContactColorOverrides = Partial<{
     piStacking: string;
     default: string;
 }>;
+export interface check2 {
+    pos: Float32Array;
+}
 export interface ContactData {
     position1: Float32Array;
     position2: Float32Array;
