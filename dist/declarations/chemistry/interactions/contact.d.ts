@@ -80,6 +80,31 @@ export declare function calculateContacts(structure: Structure, params?: {
     masterModelIndex: number;
     lineOfSightDistFactor: number;
 }): FrozenContacts;
+/**
+ * OPTIMIZED: Calculate contacts with early exit - stops at first found
+ * Much faster when you only need to know IF contacts exist
+ */
+export declare function calculateContactsWithEarlyExit(structure: Structure, params: {
+    maxHydrophobicDist: number;
+    maxHbondDist: number;
+    maxHbondSulfurDist: number;
+    maxHbondAccAngle: number;
+    maxHbondDonAngle: number;
+    maxHbondAccPlaneAngle: number;
+    maxHbondDonPlaneAngle: number;
+    maxPiStackingDist: number;
+    maxPiStackingOffset: number;
+    maxPiStackingAngle: number;
+    maxCationPiDist: number;
+    maxCationPiOffset: number;
+    maxIonicDist: number;
+    maxHalogenBondDist: number;
+    maxHalogenBondAngle: number;
+    maxMetalDist: number;
+    refineSaltBridges: boolean;
+    masterModelIndex: number;
+    lineOfSightDistFactor: number;
+} | undefined, checkParams: ContactDataParams): boolean;
 export declare function contactTypeName(type: ContactType): "hydrogen bond" | "hydrophobic contact" | "halogen bond" | "ionic interaction" | "metal coordination" | "cation-pi interaction" | "pi-pi stacking" | "weak hydrogen bond" | "unknown contact";
 export declare const ContactDataDefaultParams: {
     hydrogenBond: boolean;
@@ -140,4 +165,14 @@ export interface ContactData {
     picking: ContactPicker;
 }
 export declare function getContactData(contacts: FrozenContacts, structure: Structure, params: ContactDataParams): ContactData;
+/**
+ * OPTIMIZED: Check if ANY contact exists (stops at first found)
+ * Much faster than getContactData when you only need boolean result
+ *
+ * @param contacts - calculated contacts
+ * @param structure - molecular structure
+ * @param params - same params as getContactData
+ * @returns true if at least one contact found, false otherwise
+ */
+export declare function hasAnyContact(contacts: FrozenContacts, structure: Structure, params: ContactDataParams): boolean;
 export declare function getLabelData(contactData: ContactData, params: ContactLabelParams): TextBufferData;

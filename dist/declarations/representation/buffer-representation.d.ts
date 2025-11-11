@@ -4,6 +4,7 @@
  * @private
  */
 /// <reference types="node" />
+/// <reference types="node" />
 import Representation, { RepresentationParameters } from './representation';
 import Viewer from '../viewer/viewer';
 /**

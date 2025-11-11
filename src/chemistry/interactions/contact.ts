@@ -166,6 +166,151 @@ export function calculateContacts (structure: Structure, params = ContactDefault
   return frozenContacts
 }
 
+/**
+ * OPTIMIZED: Calculate contacts with early exit - stops at first found
+ * Much faster when you only need to know IF contacts exist
+ */
+export function calculateContactsWithEarlyExit (
+  structure: Structure, 
+  params = ContactDefaultParams,
+  checkParams: ContactDataParams
+): boolean {
+  const t0 = performance.now()
+  const p = createParams(checkParams, ContactDataDefaultParams)
+  const types: ContactType[] = []
+  if (p.hydrogenBond) types.push(ContactType.HydrogenBond)
+  if (p.hydrophobic) types.push(ContactType.Hydrophobic)
+  if (p.halogenBond) types.push(ContactType.HalogenBond)
+  if (p.ionicInteraction) types.push(ContactType.IonicInteraction)
+  if (p.metalCoordination) types.push(ContactType.MetalCoordination)
+  if (p.cationPi) types.push(ContactType.CationPi)
+  if (p.piStacking) types.push(ContactType.PiStacking)
+  if (p.weakHydrogenBond) types.push(ContactType.WeakHydrogenBond)
+
+  const wantsCharged = p.ionicInteraction || p.cationPi || p.piStacking
+  const wantsHydrogen = p.hydrogenBond || p.weakHydrogenBond
+  const wantsMetal = p.metalCoordination
+  const wantsHydrophobic = p.hydrophobic
+  const wantsHalogen = p.halogenBond
+
+  if (types.length === 0) {
+    console.log(`  └─ ❎ No contact types enabled. Total: ${(performance.now() - t0).toFixed(1)}ms`)
+    return false
+  }
+  
+  const features = calculateFeatures(structure)
+  const contacts = createContacts(features)
+  
+  // Build filter selection once
+  let filterSet: BitArray | BitArray[] | undefined
+  if (p.filterSele) {
+    if (Array.isArray(p.filterSele)) {
+      filterSet = p.filterSele.map(sele => {
+        return structure.getAtomSet(new Selection(sele))
+      })
+    } else {
+      filterSet = structure.getAtomSet(new Selection(p.filterSele))
+    }
+  }
+  
+  const { atomSets } = features
+  
+  // Helper to check if contact matches
+  const matchesFilter = (index1: number, index2: number): boolean => {
+    if (!filterSet) return true
+
+    const idx1 = atomSets[index1][0]
+    const idx2 = atomSets[index2][0]
+    
+    if (Array.isArray(filterSet)) {
+      return !!(filterSet[0].isSet(idx1) && filterSet[1].isSet(idx2) || 
+               (filterSet[1].isSet(idx1) && filterSet[0].isSet(idx2)))
+    } else {
+      return filterSet.isSet(idx1) || filterSet.isSet(idx2)
+    }
+  }
+  
+  const checkForMatch = (fromIndex: number, stageLabel: string): boolean => {
+    const { index1, index2, type } = contacts.contactStore
+    for (let i = fromIndex; i < contacts.contactStore.count; i++) {
+      if (types.includes(type[i]) && matchesFilter(index1[i], index2[i])) {
+        console.log(`  └─ ✅ EARLY EXIT after ${stageLabel}! Total: ${(performance.now() - t0).toFixed(1)}ms`)
+        return true
+      }
+    }
+    return false
+  }
+
+  // Add contacts with early exit checks
+  let tStep = performance.now()
+  if (wantsHydrophobic) {
+    const startCount = contacts.contactStore.count
+    addHydrophobicContacts(structure, contacts, params)
+    const added = contacts.contactStore.count - startCount
+    console.log(`  ├─ addHydrophobicContacts: ${(performance.now() - tStep).toFixed(1)}ms (added ${added})`)
+    if (checkForMatch(startCount, 'hydrophobic')) {
+      return true
+    }
+  } else {
+    console.log('  ├─ addHydrophobicContacts: skipped (disabled)')
+  }
+  
+  tStep = performance.now()
+  if (wantsHydrogen) {
+    const startCount = contacts.contactStore.count
+    addHydrogenBonds(structure, contacts, params)
+    const added = contacts.contactStore.count - startCount
+    console.log(`  ├─ addHydrogenBonds: ${(performance.now() - tStep).toFixed(1)}ms (added ${added})`)
+    if (checkForMatch(startCount, 'hydrogen bonds')) {
+      return true
+    }
+  } else {
+    console.log('  ├─ addHydrogenBonds: skipped (disabled)')
+  }
+  
+  tStep = performance.now()
+  if (wantsCharged) {
+    const startCount = contacts.contactStore.count
+    addChargedContacts(structure, contacts, params)
+    const added = contacts.contactStore.count - startCount
+    console.log(`  ├─ addChargedContacts: ${(performance.now() - tStep).toFixed(1)}ms (added ${added})`)
+    if (checkForMatch(startCount, 'charged')) {
+      return true
+    }
+  } else {
+    console.log('  ├─ addChargedContacts: skipped (disabled)')
+  }
+  
+  tStep = performance.now()
+  if (wantsHalogen) {
+    const startCount = contacts.contactStore.count
+    addHalogenBonds(structure, contacts, params)
+    const added = contacts.contactStore.count - startCount
+    console.log(`  ├─ addHalogenBonds: ${(performance.now() - tStep).toFixed(1)}ms (added ${added})`)
+    if (checkForMatch(startCount, 'halogen')) {
+      return true
+    }
+  } else {
+    console.log('  ├─ addHalogenBonds: skipped (disabled)')
+  }
+  
+  tStep = performance.now()
+  if (wantsMetal) {
+    const startCount = contacts.contactStore.count
+    addMetalComplexation(structure, contacts, params)
+    const added = contacts.contactStore.count - startCount
+    console.log(`  ├─ addMetalComplexation: ${(performance.now() - tStep).toFixed(1)}ms (added ${added})`)
+    if (checkForMatch(startCount, 'metal')) {
+      return true
+    }
+  } else {
+    console.log('  ├─ addMetalComplexation: skipped (disabled)')
+  }
+  
+  console.log(`  └─ ❌ NO CONTACTS FOUND. Total: ${(performance.now() - t0).toFixed(1)}ms`)
+  return false  // No matching contacts found
+}
+
 export function contactTypeName (type: ContactType) {
   switch (type) {
     case ContactType.HydrogenBond:
@@ -363,6 +508,70 @@ export function getContactData (contacts: FrozenContacts, structure: Structure, 
     radius: new Float32Array(radius),
     picking: new ContactPicker(picking, contacts, structure)
   }
+}
+
+/**
+ * OPTIMIZED: Check if ANY contact exists (stops at first found)
+ * Much faster than getContactData when you only need boolean result
+ * 
+ * @param contacts - calculated contacts
+ * @param structure - molecular structure
+ * @param params - same params as getContactData
+ * @returns true if at least one contact found, false otherwise
+ */
+export function hasAnyContact (contacts: FrozenContacts, structure: Structure, params: ContactDataParams): boolean {
+  const p = createParams(params, ContactDataDefaultParams)
+  const types: ContactType[] = []
+  if (p.hydrogenBond) types.push(ContactType.HydrogenBond)
+  if (p.hydrophobic) types.push(ContactType.Hydrophobic)
+  if (p.halogenBond) types.push(ContactType.HalogenBond)
+  if (p.ionicInteraction) types.push(ContactType.IonicInteraction)
+  if (p.metalCoordination) types.push(ContactType.MetalCoordination)
+  if (p.cationPi) types.push(ContactType.CationPi)
+  if (p.piStacking) types.push(ContactType.PiStacking)
+  if (p.weakHydrogenBond) types.push(ContactType.WeakHydrogenBond)
+  if (p.waterHydrogenBond) types.push(ContactType.WaterHydrogenBond)
+  if (p.backboneHydrogenBond) types.push(ContactType.BackboneHydrogenBond)
+
+  const { features, contactSet, contactStore } = contacts
+  const { atomSets } = features
+  const { index1, index2, type } = contactStore
+
+  let filterSet: BitArray | BitArray[] | undefined
+  if (p.filterSele) {
+    if (Array.isArray(p.filterSele)) {
+      filterSet = p.filterSele.map(sele => {
+        return structure.getAtomSet(new Selection(sele))
+      })
+    } else {
+      filterSet = structure.getAtomSet(new Selection(p.filterSele))
+    }
+  }
+
+  // Early exit: stop at first matching contact!
+  let found = false
+  contactSet.forEach(i => {
+    if (found) return  // Already found one, skip rest
+    
+    const ti = type[ i ]
+    if (!types.includes(ti)) return
+
+    if (filterSet) {
+      const idx1 = atomSets[index1[i]][0]
+      const idx2 = atomSets[index2[i]][0]
+
+      if (Array.isArray(filterSet)) {
+        if (!(filterSet[0].isSet(idx1) && filterSet[1].isSet(idx2) || (filterSet[1].isSet(idx1) && filterSet[0].isSet(idx2)))) return
+      } else {
+        if (!filterSet.isSet(idx1) && !filterSet.isSet(idx2)) return
+      }
+    }
+
+    // Found a matching contact!
+    found = true
+  })
+
+  return found
 }
 
 export function getLabelData (contactData: ContactData, params: ContactLabelParams): TextBufferData {

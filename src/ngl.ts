@@ -218,6 +218,8 @@ export { StructureComponentDefaultParameters } from './component/structure-compo
 export {
   calculateContacts,
   getContactData,
+  hasAnyContact,
+  calculateContactsWithEarlyExit,
   contactTypeName,
   ContactType,
   ContactDataDefaultParams
