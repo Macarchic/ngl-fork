@@ -167,6 +167,206 @@ export function calculateContacts (structure: Structure, params = ContactDefault
 }
 
 /**
+ * Lightweight early-exit checker.
+ * Runs only the requested contact types and returns true
+ * immediately when at least one allowed contact is found.
+ */
+export function findContactsOR(
+  structure: Structure,
+  params = ContactDefaultParams,
+  allowedTypes: ContactType[],
+  checkParams: ContactDataParams = ContactDataDefaultParams
+): boolean {
+  if (!allowedTypes || allowedTypes.length === 0) return false;
+
+  const p = createParams(checkParams, ContactDataDefaultParams);
+  const types = new Set<ContactType>(allowedTypes);
+
+  const wantsHydrophobic = types.has(ContactType.Hydrophobic);
+  const wantsHydrogen = types.has(ContactType.HydrogenBond) || types.has(ContactType.WeakHydrogenBond);
+  const wantsMetal = types.has(ContactType.MetalCoordination);
+  const wantsHalogen = types.has(ContactType.HalogenBond);
+  const wantsCharged = types.has(ContactType.IonicInteraction) || types.has(ContactType.CationPi) || types.has(ContactType.PiStacking);
+
+  // Fast bail-out
+  if (!wantsHydrophobic && !wantsHydrogen && !wantsMetal && !wantsHalogen && !wantsCharged) {
+    return false;
+  }
+
+  const features = calculateFeatures(structure);
+  const contacts = createContacts(features);
+
+  // Build filter selection once (reuse logic from calculateContactsWithEarlyExit)
+  let filterSet: BitArray | BitArray[] | undefined;
+  if (p.filterSele) {
+    if (Array.isArray(p.filterSele)) {
+      filterSet = p.filterSele.map(sele => structure.getAtomSet(new Selection(sele)));
+    } else {
+      filterSet = structure.getAtomSet(new Selection(p.filterSele));
+    }
+  }
+
+  const { atomSets } = features;
+  const matchesFilter = (index1: number, index2: number): boolean => {
+    if (!filterSet) return true;
+    const idx1 = atomSets[index1][0];
+    const idx2 = atomSets[index2][0];
+    if (Array.isArray(filterSet)) {
+      return !!(filterSet[0].isSet(idx1) && filterSet[1].isSet(idx2) ||
+                (filterSet[1].isSet(idx1) && filterSet[0].isSet(idx2)));
+    } else {
+      return filterSet.isSet(idx1) || filterSet.isSet(idx2);
+    }
+  };
+
+  const checkForMatch = (fromIndex: number): boolean => {
+    const { index1, index2, type } = contacts.contactStore;
+    for (let i = fromIndex; i < contacts.contactStore.count; i++) {
+      if (types.has(type[i]) && matchesFilter(index1[i], index2[i])) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Hydrophobic
+  if (wantsHydrophobic) {
+    const start = contacts.contactStore.count;
+    addHydrophobicContacts(structure, contacts, params);
+    if (checkForMatch(start)) return true;
+  }
+
+  // Hydrogen
+  if (wantsHydrogen) {
+    const start = contacts.contactStore.count;
+    addHydrogenBonds(structure, contacts, params);
+    if (checkForMatch(start)) return true;
+  }
+
+  // Charged / aromatic
+  if (wantsCharged) {
+    const start = contacts.contactStore.count;
+    addChargedContacts(structure, contacts, params);
+    if (checkForMatch(start)) return true;
+  }
+
+  // Halogen
+  if (wantsHalogen) {
+    const start = contacts.contactStore.count;
+    addHalogenBonds(structure, contacts, params);
+    if (checkForMatch(start)) return true;
+  }
+
+  // Metal
+  if (wantsMetal) {
+    const start = contacts.contactStore.count;
+    addMetalComplexation(structure, contacts, params);
+    if (checkForMatch(start)) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Early-exit AND checker.
+ * Returns false as soon as any requested contact type is absent,
+ * otherwise true if all requested types have at least one match.
+ */
+export function findContactsAND(
+  structure: Structure,
+  params = ContactDefaultParams,
+  requiredTypes: ContactType[],
+  checkParams: ContactDataParams = ContactDataDefaultParams
+): boolean {
+  if (!requiredTypes || requiredTypes.length === 0) return false;
+
+  const p = createParams(checkParams, ContactDataDefaultParams);
+  const types = new Set<ContactType>(requiredTypes);
+
+  const wantsHydrophobic = types.has(ContactType.Hydrophobic);
+  const wantsHydrogen = types.has(ContactType.HydrogenBond) || types.has(ContactType.WeakHydrogenBond);
+  const wantsMetal = types.has(ContactType.MetalCoordination);
+  const wantsHalogen = types.has(ContactType.HalogenBond);
+  const wantsCharged = types.has(ContactType.IonicInteraction) || types.has(ContactType.CationPi) || types.has(ContactType.PiStacking);
+
+  if (!wantsHydrophobic && !wantsHydrogen && !wantsMetal && !wantsHalogen && !wantsCharged) {
+    return false;
+  }
+
+  const features = calculateFeatures(structure);
+  const contacts = createContacts(features);
+
+  let filterSet: BitArray | BitArray[] | undefined;
+  if (p.filterSele) {
+    if (Array.isArray(p.filterSele)) {
+      filterSet = p.filterSele.map(sele => structure.getAtomSet(new Selection(sele)));
+    } else {
+      filterSet = structure.getAtomSet(new Selection(p.filterSele));
+    }
+  }
+
+  const { atomSets } = features;
+  const matchesFilter = (index1: number, index2: number): boolean => {
+    if (!filterSet) return true;
+    const idx1 = atomSets[index1][0];
+    const idx2 = atomSets[index2][0];
+    if (Array.isArray(filterSet)) {
+      return !!(filterSet[0].isSet(idx1) && filterSet[1].isSet(idx2) ||
+                (filterSet[1].isSet(idx1) && filterSet[0].isSet(idx2)));
+    } else {
+      return filterSet.isSet(idx1) || filterSet.isSet(idx2);
+    }
+  };
+
+  const hasMatch = (fromIndex: number, targetTypes: Set<ContactType>): boolean => {
+    const { index1, index2, type } = contacts.contactStore;
+    for (let i = fromIndex; i < contacts.contactStore.count; i++) {
+      if (targetTypes.has(type[i]) && matchesFilter(index1[i], index2[i])) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Hydrophobic
+  if (wantsHydrophobic) {
+    const start = contacts.contactStore.count;
+    addHydrophobicContacts(structure, contacts, params);
+    if (!hasMatch(start, types)) return false;
+  }
+
+  // Hydrogen
+  if (wantsHydrogen) {
+    const start = contacts.contactStore.count;
+    addHydrogenBonds(structure, contacts, params);
+    if (!hasMatch(start, types)) return false;
+  }
+
+  // Charged / aromatic
+  if (wantsCharged) {
+    const start = contacts.contactStore.count;
+    addChargedContacts(structure, contacts, params);
+    if (!hasMatch(start, types)) return false;
+  }
+
+  // Halogen
+  if (wantsHalogen) {
+    const start = contacts.contactStore.count;
+    addHalogenBonds(structure, contacts, params);
+    if (!hasMatch(start, types)) return false;
+  }
+
+  // Metal
+  if (wantsMetal) {
+    const start = contacts.contactStore.count;
+    if (!hasMatch(start, types)) return false;
+  }
+
+  return true;
+}
+
+
+/**
  * OPTIMIZED: Calculate contacts with early exit - stops at first found
  * Much faster when you only need to know IF contacts exist
  */
@@ -396,16 +596,16 @@ const ContactTypeKey: Record<ContactType, keyof NonNullable<ContactColorOverride
 
 const tmpColor = new Color()
 function contactColor (type: ContactType, overrides?: ContactColorOverrides) {
-  // 1) якщо передали кастомний колір – використовуємо його
+  // 1) If custom color provided, use it
   const key = ContactTypeKey[type]
   const hexOrCss = overrides?.[key] ?? (key !== 'default' ? undefined : overrides?.default)
   if (hexOrCss) {
-    // приймає "#rrggbb", "rrggbb", "rgb(...)" тощо
+    // Accepts "#rrggbb", "rrggbb", "rgb(...)" etc.
     tmpColor.set(hexOrCss as any)
     return tmpColor.toArray()
   }
 
-  // 2) дефолтні кольори як було
+  // 2) Default colors as before
   switch (type) {
     case ContactType.HydrogenBond:
     case ContactType.BackboneHydrogenBond:

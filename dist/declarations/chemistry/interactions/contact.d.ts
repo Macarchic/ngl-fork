@@ -81,6 +81,58 @@ export declare function calculateContacts(structure: Structure, params?: {
     lineOfSightDistFactor: number;
 }): FrozenContacts;
 /**
+ * Lightweight early-exit checker.
+ * Runs only the requested contact types and returns true
+ * immediately when at least one allowed contact is found.
+ */
+export declare function findContactsOR(structure: Structure, params: {
+    maxHydrophobicDist: number;
+    maxHbondDist: number;
+    maxHbondSulfurDist: number;
+    maxHbondAccAngle: number;
+    maxHbondDonAngle: number;
+    maxHbondAccPlaneAngle: number;
+    maxHbondDonPlaneAngle: number;
+    maxPiStackingDist: number;
+    maxPiStackingOffset: number;
+    maxPiStackingAngle: number;
+    maxCationPiDist: number;
+    maxCationPiOffset: number;
+    maxIonicDist: number;
+    maxHalogenBondDist: number;
+    maxHalogenBondAngle: number;
+    maxMetalDist: number;
+    refineSaltBridges: boolean;
+    masterModelIndex: number;
+    lineOfSightDistFactor: number;
+} | undefined, allowedTypes: ContactType[], checkParams?: ContactDataParams): boolean;
+/**
+ * Early-exit AND checker.
+ * Returns false as soon as any requested contact type is absent,
+ * otherwise true if all requested types have at least one match.
+ */
+export declare function findContactsAND(structure: Structure, params: {
+    maxHydrophobicDist: number;
+    maxHbondDist: number;
+    maxHbondSulfurDist: number;
+    maxHbondAccAngle: number;
+    maxHbondDonAngle: number;
+    maxHbondAccPlaneAngle: number;
+    maxHbondDonPlaneAngle: number;
+    maxPiStackingDist: number;
+    maxPiStackingOffset: number;
+    maxPiStackingAngle: number;
+    maxCationPiDist: number;
+    maxCationPiOffset: number;
+    maxIonicDist: number;
+    maxHalogenBondDist: number;
+    maxHalogenBondAngle: number;
+    maxMetalDist: number;
+    refineSaltBridges: boolean;
+    masterModelIndex: number;
+    lineOfSightDistFactor: number;
+} | undefined, requiredTypes: ContactType[], checkParams?: ContactDataParams): boolean;
+/**
  * OPTIMIZED: Calculate contacts with early exit - stops at first found
  * Much faster when you only need to know IF contacts exist
  */
