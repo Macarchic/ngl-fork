@@ -84,9 +84,12 @@ export function isMasterContact (ap1: AtomProxy, ap2: AtomProxy, masterIdx: numb
 }
 
 export function invalidAtomContact (ap1: AtomProxy, ap2: AtomProxy, masterIdx: number) {
+  // masterIdx -1 = intra-model mode. Skip residue check so single-residue ligands
+  // (SDF-loaded, all atoms share one residueIndex) can form intra-molecular contacts.
+  const sameResidueInvalid = masterIdx !== -1 && ap1.residueIndex === ap2.residueIndex
   return !isMasterContact(ap1, ap2, masterIdx) && (
     ap1.modelIndex !== ap2.modelIndex ||
-    ap1.residueIndex === ap2.residueIndex ||
+    sameResidueInvalid ||
     (ap1.altloc && ap2.altloc && ap1.altloc !== ap2.altloc)
   )
 }
